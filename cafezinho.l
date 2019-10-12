@@ -3,9 +3,12 @@
   #include "y.tab.h"
   int yyerror(char *errormsg);
   int yyparse();
-  
+  extern int eof;
   static int verifyCarconst(void);
-  static void skip_multiple_line_comment(void);
+  static int ignoreMultilineComment(void);
+
+  static int commentStart = 0;
+  static int carStart = 0;
 
 %}
 
@@ -42,6 +45,7 @@
 "!"            { fprintf(stderr, "Achou !\n"); return NOT; }
 "+"            { fprintf(stderr, "Achou +\n"); return SUM; }
 "-"            { fprintf(stderr, "Achou -\n"); return SUB; }
+"/*"           { fprintf(stderr, "Achou */\n"); ignoreMultilineComment();}
 "/"            { fprintf(stderr, "Achou /\n"); return DIV; }
 "*"            { fprintf(stderr, "Achou *\n"); return MULT; }
 ";"            { fprintf(stderr, "Achou ;\n"); return SEMICOLON; }
@@ -49,95 +53,101 @@
 "int"          { fprintf(stderr, "Achou int\n"); return INT;  }
 "car"          { fprintf(stderr, "Achou car\n"); return CAR; }
 [0-9]*         { fprintf(stderr, "Achou intconst\n"); return INTCONST; }
-["]            { fprintf(stderr, "Achou carconst\n"); return verifyCarconst(); }
+["]            { fprintf(stderr, "Achou aspa\n"); return verifyCarconst(); }
 [_a-zA-Z0-9]*  { fprintf(stderr, "Achou id\n"); return ID; }
 " "  ;
 "\n" ;
+"\t" ;
 .    { yyerror("Erro: Caractere inválido.");  }
+<<EOF>> {fprintf(stderr, "END OF FILE");}
 %%
 
 int yywrap(void)
 {
+     if(commentStart){
+          fprintf(stderr, "ERRO: Comentario nao termina. Linha: %d\n.",commentStart);
+          commentStart = 0;
+     } else if(carStart){
+          fprintf(stderr, "ERRO: Cadeia de caracteres nao termina. Linha: %d.\n",carStart);
+          carStart = 0;
+     }
+     
      return 0;
 }
 
 int yyerror(char *errormsg)
 {
-     fprintf(stderr, "LINE: %d AT %c\nERROR: %s\n",yylineno, yytext[0], errormsg);
+     fprintf(stderr, "ERRO: %s. Linha: %d caractere: %c\n",errormsg, yylineno, yytext[0]);
      exit(1);
+}
+
+static int ignoreMultilineComment(void){
+     register int c;
+
+     commentStart = yylineno;
+
+     for ( ; ; ) {
+          while ( (c = input()) != '*' && c != EOF );
+
+          if ( c == '*' ){
+               while ( (c = input()) == '*' );
+
+               if ( c == '/' ){
+                    commentStart = 0;
+                    break;                    
+               }
+
+               if ( c == EOF ){
+                    commentStart = 0;
+                    fprintf(stderr, "ERRO: Comentario nao termina. Linha: %d\n.", yylineno);
+                    return 0;
+               }
+          }
+     }
 }
 
 static int verifyCarconst(void)
 {
-     while(1){
-          switch(input())
-          {
-               case EOF:
-                    fprintf(stderr, "Erro: Cadeia de caracteres não termina. Linha: %d\n", yylineno);
-                    exit(-1);
-                    return -1;
-               break;
-               case '\n':
-                    fprintf(stderr, "Erro: Cadeia de caracteres ocupa mais de uma linha. Linha: %d\n", yylineno);
-                    exit(-1);
-                    return -1;
-               break;
-               case '"':
-                    fprintf(stderr, "retornou CARCONST");
-                    return CARCONST;
-               break;
-               default:
-               break;
-          }
-     }
-}
-static void skip_multiple_line_comment(void){
-     return ;
-}
-/*
-static void skip_multiple_line_comment(void){
-     char c;
-     int hasAsterisk = 0;
-     
-     for(;;){
-          fprintf(stderr, "uaile");
+     register int c;
 
-          switch(input()){
-               case EOF:
-                    fprintf(stderr, "END OF FILE");
-                    exit(-1);
-                    return ;
-               break;
-               case '*':
-                    fprintf(stderr, "OLHA QUERENDO LINHA: %d\n", yylineno);
-                    hasAsterisk = 1;
-               break;
-               case '/':
-                    if (hasAsterisk){
-                         fprintf(stderr, "FECHOU");
-                    }
-               break;
-               default:
-                    hasAsterisk = 0;
-               break;
+     carStart = yylineno;
+
+     for ( ; ; ) {
+          while ( (c = input()) != '"' && c != EOF && c != '\n');
+
+          if ( c == '\n'){
+               fprintf(stderr, "Erro: Cadeia de caracteres ocupa mais de uma linha. Linha: %d\n", yylineno);
+               carStart = 0;
+               return -1;
+          }
+
+          if ( c == '"' ){
+               carStart = 0;
+               return CARCONST;
+          }
+
+          if ( feof(yyin) ){
+               carStart = 0;
+               fprintf(stderr, "Erro: Cadeia de caracteres não termina. Linha: %d\n", yylineno);
+               return 0;
           }
      }
-}*/
+}
+
 
 int main(int argc, char **argv)
 {     
      FILE *arq = fopen(argv[1],"r");
      
      if( arq == NULL ) {
-          printf("could not read '%s'", argv[1]);
+          printf("Não foi possivel abrir o arquivo '%s'", argv[1]);
+          return 0;
      }
 
      yyin = fopen(argv[1],"r");
-
 	yyparse();
-          fprintf(stderr, "PARSOU");
      fclose(yyin);
-          fprintf(stderr, "FECHOU");
+
      return 0;
 }
 /*
