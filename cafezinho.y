@@ -50,7 +50,7 @@
 
 %%
 
-Programa : DeclFuncVar DeclProg
+Programa : DeclFuncVar DeclProg {printf("GGWP");}
 		 ;
 
 DeclFuncVar : Tipo ID DeclVar SEMICOLON DeclFuncVar
@@ -72,25 +72,25 @@ ListaParametrosCont : Tipo ID
 					| Tipo ID OPENBRAC CLOSEBRAC COMMA ListaParametrosCont
 					;
 
-DeclProg : PROGRAM Bloco
+DeclProg : PROGRAM Bloco {printf("== DeclProg 1 =====\n");}
 		 ;
 
-Bloco : OPENBRACE ListaDeclVar ListaComando CLOSEBRACE
-	  | OPENBRACE ListaDeclVar CLOSEBRACE
+Bloco : OPENBRACE ListaDeclVar ListaComando CLOSEBRACE {printf("== BLOCO 1\n");}
+	  | OPENBRACE ListaDeclVar CLOSEBRACE {printf("== BLOCO 2\n");}
 	  ;
 
-ListaDeclVar : Tipo ID DeclVar SEMICOLON ListaDeclVar
-			 | Tipo ID OPENBRAC INTCONST CLOSEBRAC DeclVar SEMICOLON ListaDeclVar
-			 | /* vazio */
+ListaDeclVar : Tipo ID DeclVar SEMICOLON ListaDeclVar {printf("== ListaDeclVar 1\n");}
+			 | Tipo ID OPENBRAC INTCONST CLOSEBRAC DeclVar SEMICOLON ListaDeclVar {printf("== ListaDeclVar 2\n");}
+			 | /* vazio */ {printf("== ListaDeclVar 3\n");}
 			 ;
 
-DeclVar : COMMA ID DeclVar
-		| COMMA ID OPENBRAC INTCONST CLOSEBRAC DeclVar
-		| /* vazio */
+DeclVar : COMMA ID DeclVar {printf("DeclVar 1\n");}
+		| COMMA ID OPENBRAC INTCONST CLOSEBRAC DeclVar {printf("DeclVar 2\n");}
+		| /* vazio */ {printf("== DeclVar 3\n");}
 		;
 
-Tipo : INT
-     | CAR
+Tipo : INT {printf("== INT\n");}
+     | CAR {printf("== CAR\n");}
      ;
 
 ListaComando : Comando 
